@@ -1,0 +1,321 @@
+"use strict";
+/**
+ * 导出一个 Mirai 类，具体见类的各个属性和方法。
+ * @packageDocumentation
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const axios = __importStar(require("./axios"));
+const mirai_api_http_1 = __importDefault(require("./mirai-api-http"));
+const log = __importStar(require("./utils/log"));
+const utils_1 = require("./utils");
+const check_1 = require("./utils/check");
+const ora_1 = __importDefault(require("ora"));
+/**
+ * Mirai SDK 初始化类
+ */
+class Mirai {
+    constructor(mahConfig = {
+        host: "0.0.0.0",
+        port: 8080,
+        authKey: "el-psy-congroo",
+        cacheSize: 4096,
+        enableWebsocket: false,
+        cors: ["*"],
+    }) {
+        this.mahConfig = mahConfig;
+        this.axios = axios.init(`http://${this.mahConfig.host}:${this.mahConfig.port}`);
+        this.api = new mirai_api_http_1.default(this.mahConfig, this.axios);
+        // default
+        this.sessionKey = "";
+        this.qq = 0;
+        this.verified = false;
+        this.active = true;
+        this.listener = new Map();
+        this.beforeListener = [];
+        this.afterListener = [];
+        this.interval = 200;
+        const pkg = require("../package.json");
+        log.info(`Version ${pkg.version}`);
+        log.info(`Docs: ${pkg.homepage}`);
+        log.info(`GitHub: ${pkg.repository.url}`);
+    }
+    /**
+     * @deprecated since version v0.5.0
+     */
+    login(qq) {
+        log.error(`mirai.login(qq) 请使用 miria.link(${qq}) 替代`);
+    }
+    /**
+     * link 链接 mirai 已经登录的 QQ 号
+     */
+    link(qq) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.qq = qq;
+            // Todo
+            const { session } = yield this.auth();
+            this.sessionKey = session;
+            return yield this.verify();
+        });
+    }
+    /**
+     * 获取 Session
+     */
+    auth() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = yield this.api.auth();
+            if (data.code === 0) {
+                this.spinner = ora_1.default(`验证 Session: ${data.session}`).start();
+            }
+            return data;
+        });
+    }
+    /**
+     * 激活 Session，绑定 QQ
+     */
+    verify() {
+        var _a, _b;
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = yield this.api.verify(this.qq);
+            if (data.code === 0) {
+                (_a = this.spinner) === null || _a === void 0 ? void 0 : _a.succeed();
+            }
+            else {
+                (_b = this.spinner) === null || _b === void 0 ? void 0 : _b.fail();
+            }
+            return data;
+        });
+    }
+    /**
+     * 释放 Session
+     */
+    release() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = yield this.api.release();
+            if (data.code === 0) {
+                log.success(`释放 ${this.qq} Session: ${this.sessionKey}`);
+            }
+            return data;
+        });
+    }
+    /**
+     * 绑定事件列表
+     * message: FriendMessage | GroupMessage | TempMessage
+     * [mirai-api-http事件类型一览](https://github.com/project-mirai/mirai-api-http/blob/master/EventType.md)
+     * mirai.on('MemberMuteEvent', ()=>{})
+     * @param type
+     * @param callback
+     */
+    on(type, callback) {
+        // too complex for typescript so that in some case it cannot identify the type correctly
+        // 说明监听所有
+        if (type === "message") {
+            this.addListener("FriendMessage", callback);
+            this.addListener("GroupMessage", callback);
+            this.addListener("TempMessage", callback);
+        }
+        else {
+            this.addListener(type, callback);
+        }
+    }
+    /**
+     * 添加监听者
+     * @param type
+     * @param callback
+     */
+    addListener(type, callback) {
+        const set = this.listener.get(type);
+        if (set) {
+            set.push(callback);
+        }
+        else {
+            this.listener.set(type, [callback]);
+        }
+    }
+    /**
+     * 快速回复（只在消息类型包含群组或好友信息时有效）
+     * @param msg 发送内容（消息链/纯文本皆可）
+     * @param srcMsg 回复哪条消息
+     * @param quote 是否引用回复（非聊天消息类型时无效）
+     */
+    reply(msgChain, srcMsg, quote = false) {
+        let messageId = 0;
+        let target = 0;
+        let type = "friend";
+        if (check_1.isMessage(srcMsg)) {
+            if (quote && srcMsg.messageChain[0].type === "Source") {
+                messageId = srcMsg.messageChain[0].id;
+            }
+        }
+        // reply 不同的目标
+        switch (srcMsg.type) {
+            case "TempMessage":
+            case "FriendMessage":
+                type = "friend";
+                target = srcMsg.sender.id;
+                break;
+            case "GroupMessage":
+                type = "group";
+                target = srcMsg.sender.group.id;
+                break;
+            case "BotOnlineEvent":
+            case "BotOfflineEventActive":
+            case "BotOfflineEventForce":
+            case "BotOfflineEventDropped":
+            case "BotReloginEvent":
+                type = "friend";
+                target = srcMsg.qq;
+                break;
+            case "GroupRecallEvent":
+            case "BotGroupPermissionChangeEvent":
+            case "BotJoinGroupEvent":
+            case "GroupNameChangeEvent":
+            case "GroupEntranceAnnouncementChangeEvent":
+            case "GroupMuteAllEvent":
+            case "GroupAllowAnonymousChatEvent":
+            case "GroupAllowConfessTalkEvent":
+            case "GroupAllowMemberInviteEvent":
+                type = "group";
+                break;
+            case "MemberJoinEvent":
+            case "MemberLeaveEventKick":
+            case "MemberLeaveEventQuit":
+            case "MemberCardChangeEvent":
+            case "MemberSpecialTitleChangeEvent":
+            case "MemberPermissionChangeEvent":
+            case "MemberMuteEvent":
+            case "MemberUnmuteEvent":
+                type = "group";
+                target = srcMsg.member.group.id;
+                break;
+            case "MemberJoinRequestEvent":
+                type = "group";
+                target = srcMsg.groupId;
+                break;
+            default:
+                break;
+        }
+        if (type === "friend") {
+            return this.api.sendFriendMessage(msgChain, target, messageId);
+        }
+        else if (type === "group") {
+            return this.api.sendGroupMessage(msgChain, target, messageId);
+        }
+    }
+    /**
+     * 为消息和事件类型挂载辅助函数
+     * @param msg
+     */
+    addHelperForMsg(msg) {
+        this.curMsg = msg;
+        // 消息类型添加直接获取消息内容的参数
+        if (msg.type === "FriendMessage" ||
+            msg.type === "GroupMessage" ||
+            msg.type === "TempMessage") {
+            msg.plain = utils_1.getPlain(msg.messageChain);
+        }
+        // 为各类型添加 reply 辅助函数
+        msg.reply = (msgChain, quote = false) => __awaiter(this, void 0, void 0, function* () {
+            this.reply(msgChain, msg, quote);
+        });
+        // 为请求类事件添加 respond 辅助函数
+        if (((e) => true)(msg)) {
+            msg.respond = (operate, message) => __awaiter(this, void 0, void 0, function* () {
+                this.api.resp.mapper[msg.type](msg, operate, message);
+            });
+        }
+    }
+    /**
+     * 执行所有事件监听回调函数
+     * @param msg
+     */
+    execListener(msg) {
+        this.beforeListener.forEach((cb) => {
+            cb(msg);
+        });
+        if (this.active) {
+            const set = this.listener.get(msg.type);
+            if (set) {
+                set.forEach((callback) => {
+                    callback(msg);
+                });
+            }
+        }
+        this.afterListener.forEach((cb) => {
+            cb(msg);
+        });
+    }
+    /**
+     * 处理消息
+     * @param msg
+     * @param before 在监听器函数执行前执行
+     * @param after 在监听器函数执行后执行
+     */
+    handle(msg, before, after) {
+        this.addHelperForMsg(msg);
+        if (before) {
+            before(msg);
+        }
+        this.execListener(msg);
+        if (after) {
+            after(msg);
+        }
+        // 清空当前 curMsg
+        delete this.curMsg;
+    }
+    /**
+     * 监听消息和事件
+     * @param before 在监听器函数执行前执行
+     * @param after 在监听器函数执行后执行
+     */
+    listen(before, after) {
+        const address = this.mahConfig.host + ":" + this.mahConfig.port;
+        if (this.mahConfig.enableWebsocket) {
+            this.api.all((msg) => {
+                this.handle(msg, before, after);
+            });
+        }
+        else {
+            log.info("开始监听: http://" + address);
+            setInterval(() => __awaiter(this, void 0, void 0, function* () {
+                const { data } = yield this.api.fetchMessage();
+                if (data && data.length) {
+                    data.forEach((msg) => {
+                        this.handle(msg, before, after);
+                    });
+                }
+            }), this.interval);
+        }
+    }
+}
+exports.default = Mirai;
