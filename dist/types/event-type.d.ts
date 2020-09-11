@@ -4,6 +4,7 @@
  */
 import * as Contact from "./contact";
 import { MessageChain } from "./message-type";
+import { RequestEventOperation } from "../mirai-api-http/resp";
 /**
  * 内部基类
  */
@@ -247,7 +248,6 @@ export interface MemberUnmuteEvent extends BaseEvent {
  */
 export interface NewFriendRequestEvent extends BaseRequestEvent {
     type: "NewFriendRequestEvent";
-    operations: ["allow", "deny", "black"];
     eventId: number;
     fromId: number;
     groupId: number;
@@ -259,7 +259,6 @@ export interface NewFriendRequestEvent extends BaseRequestEvent {
  */
 export interface MemberJoinRequestEvent extends BaseRequestEvent {
     type: "MemberJoinRequestEvent";
-    operations: ["allow", "deny", "ignore", "deny-black", "ignore-black"];
     eventId: number;
     fromId: number;
     groupId: number;
@@ -272,7 +271,6 @@ export interface MemberJoinRequestEvent extends BaseRequestEvent {
  */
 export interface BotInvitedJoinGroupRequestEvent extends BaseRequestEvent {
     type: "BotInvitedJoinGroupRequestEvent";
-    operations: ["allow", "deny"];
     eventId: number;
     fromId: number;
     groupId: number;
@@ -281,8 +279,8 @@ export interface BotInvitedJoinGroupRequestEvent extends BaseRequestEvent {
     message: string;
 }
 interface BaseRequestEvent extends BaseEvent {
-    operations: string[];
-    respond: (operate: this["operations"][number], message?: string) => Promise<void>;
+    type: any;
+    respond: (operate: RequestEventOperation<this["type"]>, message?: string) => Promise<void>;
 }
 export declare type RequestEvent = NewFriendRequestEvent | MemberJoinRequestEvent | BotInvitedJoinGroupRequestEvent;
 export declare type Event = BotOnlineEvent | BotOfflineEventActive | BotOfflineEventForce | BotOfflineEventDropped | BotReloginEvent | GroupRecallEvent | FriendRecallEvent | BotGroupPermissionChangeEvent | BotMuteEvent | BotUnmuteEvent | BotJoinGroupEvent | BotLeaveEventActive | BotLeaveEventKick | GroupNameChangeEvent | GroupEntranceAnnouncementChangeEvent | GroupMuteAllEvent | GroupAllowAnonymousChatEvent | GroupAllowConfessTalkEvent | GroupAllowMemberInviteEvent | MemberJoinEvent | MemberLeaveEventKick | MemberLeaveEventQuit | MemberCardChangeEvent | MemberSpecialTitleChangeEvent | MemberPermissionChangeEvent | MemberMuteEvent | MemberUnmuteEvent | NewFriendRequestEvent | MemberJoinRequestEvent | BotInvitedJoinGroupRequestEvent;

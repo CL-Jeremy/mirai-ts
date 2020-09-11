@@ -250,9 +250,11 @@ class Mirai {
             this.reply(msgChain, msg, quote);
         });
         // 为请求类事件添加 respond 辅助函数
-        if (((e) => true)(msg)) {
+        if (msg.type === "NewFriendRequestEvent" ||
+            msg.type === "MemberJoinRequestEvent" ||
+            msg.type === "BotInvitedJoinGroupRequestEvent") {
             msg.respond = (operate, message) => __awaiter(this, void 0, void 0, function* () {
-                this.api.resp.mapper[msg.type](msg, operate, message);
+                this.api.resp._request(msg, operate, message);
             });
         }
     }
