@@ -6,7 +6,8 @@
 import { AxiosStatic, AxiosResponse } from "axios";
 import { MessageType, Api, Config, EventType } from "..";
 
-// for upload image
+// 上传媒体内容
+import { Stream } from "stream";
 import FormData from "form-data";
 import WebSocket from "ws";
 
@@ -354,7 +355,7 @@ export default class MiraiApiHttp {
    */
   async uploadImage(
     type: "friend" | "group" | "temp",
-    img: File
+    img: Stream
   ): Promise<Api.Response.UploadImage> {
     const form = new FormData();
     form.append("sessionKey", this.sessionKey);
@@ -373,7 +374,7 @@ export default class MiraiApiHttp {
    */
   async uploadVoice(
     type: "friend" | "group" | "temp",
-    voice: File
+    voice: Stream
   ): Promise<Api.Response.UploadVoice> {
     const form = new FormData();
     form.append("sessionKey", this.sessionKey);
@@ -396,7 +397,7 @@ export default class MiraiApiHttp {
     type: "friend" | "group" | "temp",
     target: number,
     path: string,
-    file: File
+    file: Stream
   ): Promise<Api.Response.UploadFileAndSend> {
     const form = new FormData();
     form.append("sessionKey", this.sessionKey);
