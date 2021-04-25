@@ -168,6 +168,29 @@ function Poke(name: MessageType.PokeName): MessageType.Poke {
   };
 }
 
+/**
+ * （实验性）需要 mirai-api-http 1.11.0 以上，mirai-console 2.5.1 以上
+ * 文件消息格式
+ * @param id 文件唯一 ID
+ * @param internalId 服务器需要的 ID
+ * @param name 文件名字
+ * @param size 文件大小
+ */
+function File(
+  id: string,
+  internalId: number,
+  name: string,
+  size: number
+): MessageType.File {
+  return {
+    type: "File",
+    id,
+    internalId,
+    name,
+    size,
+  };
+}
+
 export default {
   Quote,
   At,
@@ -181,4 +204,5 @@ export default {
   Json,
   App,
   Poke,
+  File,
 };

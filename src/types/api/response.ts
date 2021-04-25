@@ -65,6 +65,13 @@ export interface UploadVoice {
   path: string;
 }
 
+export interface UploadFileAndSend extends BaseResponse {
+  /**
+   * 文件唯一id
+   */
+  id: string;
+}
+
 export type FriendList = Friend[];
 export type GroupList = Group[];
 export type MemberList = Member[];

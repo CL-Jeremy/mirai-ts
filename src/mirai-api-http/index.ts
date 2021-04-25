@@ -386,6 +386,31 @@ export default class MiraiApiHttp {
   }
 
   /**
+   * 使用此方法上传文件至群/好友并返回 FileId
+   * @param type 当前仅支持 "group"
+   * @param target 发送对象的QQ号或群号，当前仅支持群
+   * @param path 文件上传目录与名字，例：folder/subfolder/file
+   * @param file 目标文件 fs.createReadStream(file)
+   */
+  async uploadFileAndSend(
+    type: "friend" | "group" | "temp",
+    target: number,
+    path: string,
+    file: File
+  ): Promise<Api.Response.UploadFileAndSend> {
+    const form = new FormData();
+    form.append("sessionKey", this.sessionKey);
+    form.append("type", type);
+    form.append("target", target);
+    form.append("path", path);
+    form.append("file", file);
+    const { data } = await this.axios.post("/uploadFileAndSend", form, {
+      headers: form.getHeaders(), // same as post: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  }
+
+  /**
    * 撤回消息
    * 使用此方法撤回指定消息。对于bot发送的消息，有2分钟时间限制。对于撤回群聊中群员的消息，需要有相应权限
    * @param target 需要撤回的消息的messageId

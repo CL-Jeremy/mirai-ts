@@ -209,9 +209,32 @@ export enum PokeName {
 export interface Poke extends BaseSingleMessage {
   type: "Poke";
   /**
-   * 	戳一戳的类型
+   * 戳一戳的类型
    */
   name: PokeName;
+}
+
+/**
+ * 文件消息（实验性）
+ */
+export interface File extends BaseSingleMessage {
+  type: "File";
+  /**
+   * 文件唯一 ID
+   */
+  id: string;
+  /**
+   * 服务器需要的 ID
+   */
+  internalId: number;
+  /**
+   * 文件名字
+   */
+  name: string;
+  /**
+   * 文件大小
+   */
+  size: number;
 }
 
 /**
@@ -231,7 +254,8 @@ export type SingleMessage =
   | Xml
   | Json
   | App
-  | Poke;
+  | Poke
+  | File;
 
 export type SingleMessageMap = {
   Source: Source;
@@ -247,6 +271,7 @@ export type SingleMessageMap = {
   Json: Json;
   App: App;
   Poke: Poke;
+  File: File;
 };
 
 /**
